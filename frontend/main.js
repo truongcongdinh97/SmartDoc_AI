@@ -1,20 +1,18 @@
 /**
  * Frontend: Electron Main Process — Entry point for Electron app.
  *
- * Creates main window, handles file operations, manages Python subprocess.
- * Starts Python Flask server on app launch.
+ * Creates main window and handles file operations.
+ * Python Flask server is started by start.bat script.
  *
  * Wing: smartdoc_frontend
  * Topic: electron_main
- * Last Updated: 2026-05-05 09:47
+ * Last Updated: 2026-05-05 14:16
  */
 
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 
 let mainWindow = null;
-let pythonProcess = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -43,38 +41,9 @@ function createWindow() {
     });
 }
 
-function startPythonServer() {
-    // Use system Python (venv not created yet for testing)
-    const pythonPath = 'python';
-    const scriptPath = path.join(__dirname, '../../backend/app.py');
-
-    pythonProcess = spawn(pythonPath, [scriptPath], {
-        cwd: path.join(__dirname, '../../backend'),
-        detached: false,
-    });
-
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`Python: ${data}`);
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Python Error: ${data}`);
-    });
-
-    pythonProcess.on('close', (code) => {
-        console.log(`Python server exited with code ${code}`);
-    });
-}
-
 app.whenReady().then(() => {
-    // Start Python server first
-    console.log('Starting Python backend server...');
-    startPythonServer();
-
-    // Wait a bit for Python to start, then create window
-    setTimeout(() => {
-        createWindow();
-    }, 3000);
+    // Create main window
+    createWindow();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -85,10 +54,6 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
-        // Kill Python server when closing app
-        if (pythonProcess) {
-            pythonProcess.kill();
-        }
         app.quit();
     }
 });
