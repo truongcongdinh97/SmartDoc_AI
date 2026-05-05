@@ -101,7 +101,11 @@ echo.
 REM Start Python Backend
 echo [START] Starting Python Backend...
 cd /d "%~dp0backend"
-start "SmartDoc Backend" /MIN python app.py
+if exist "venv\Scripts\python.exe" (
+    start "SmartDoc Backend" /MIN venv\Scripts\python app.py
+) else (
+    start "SmartDoc Backend" /MIN python app.py
+)
 timeout /t 3 /nobreak >nul
 echo [OK] Backend started
 echo.
