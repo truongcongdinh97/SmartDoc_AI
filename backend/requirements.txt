@@ -1,14 +1,4 @@
-"""Backend: Requirements — Python dependencies for SmartDoc AI.
-
-Core libraries for PDF processing, vector storage, and AI integration.
-All packages are local-first and offline-capable.
-
-Wing: smartdoc_backend
-Topic: environment_setup
-Last Updated: 2026-05-05 09:05
-"""
-
-# PDF/DOCX Processing
+ # PDF/DOCX Processing
 docling>=2.0.0  # IBM's document parsing engine
 pypdf>=3.17.0  # Fallback for simple PDFs
 
