@@ -10,6 +10,7 @@
  */
 
 const React = require('react');
+const ApiService = require('../services/api');
 
 class TabPreview extends React.Component {
     constructor(props) {
@@ -21,6 +22,10 @@ class TabPreview extends React.Component {
             date: props.document?.metadata?.date || '',
             author: props.document?.metadata?.author || '',
             wing: props.document?.wing || '',
+            aiLoading: false,
+            aiError: null,
+            aiResponse: '',
+            customInstruction: '',
         };
     }
 
@@ -33,6 +38,9 @@ class TabPreview extends React.Component {
                 date: this.props.document?.metadata?.date || '',
                 author: this.props.document?.metadata?.author || '',
                 wing: this.props.document?.wing || '',
+                aiResponse: '',
+                customInstruction: '',
+                aiError: null,
             });
         }
     }
@@ -72,9 +80,66 @@ class TabPreview extends React.Component {
         this.setState({ [field]: value });
     }
 
+    async handleSummarize() {
+        this.setState({ aiLoading: true, aiError: null, aiResponse: '' });
+        try {
+            const result = await ApiService.summarizeDocument(this.state.selectedDoc.markdown);
+            this.setState({ aiResponse: result.summary, aiLoading: false });
+        } catch (error) {
+            this.setState({ 
+                aiError: `Không thể tóm tắt: ${error.message}`, 
+                aiLoading: false 
+            });
+        }
+    }
+
+    async handleFormalize() {
+        this.setState({ aiLoading: true, aiError: null, aiResponse: '' });
+        try {
+            const result = await ApiService.formalizeDocument(this.state.selectedDoc.markdown);
+            this.setState({ aiResponse: result.markdown, aiLoading: false });
+        } catch (error) {
+            this.setState({ 
+                aiError: `Không thể viết lại: ${error.message}`, 
+                aiLoading: false 
+            });
+        }
+    }
+
+    async handleCustomRefinement() {
+        if (!this.state.customInstruction.trim()) {
+            this.setState({ aiError: 'Vui lòng nhập yêu cầu của bạn' });
+            return;
+        }
+        this.setState({ aiLoading: true, aiError: null, aiResponse: '' });
+        try {
+            const result = await ApiService.customRefinement(
+                this.state.selectedDoc.markdown,
+                this.state.customInstruction
+            );
+            this.setState({ aiResponse: result.markdown, aiLoading: false });
+        } catch (error) {
+            this.setState({ 
+                aiError: `Không thể thực hiện yêu cầu: ${error.message}`, 
+                aiLoading: false 
+            });
+        }
+    }
+
     render() {
         const { documents, onDocumentSelect } = this.props;
-        const { selectedDoc, editing, title, date, author, wing } = this.state;
+        const { 
+            selectedDoc, 
+            editing, 
+            title, 
+            date, 
+            author, 
+            wing,
+            aiLoading,
+            aiError,
+            aiResponse,
+            customInstruction
+        } = this.state;
 
         if (!selectedDoc) {
             return (
@@ -220,22 +285,79 @@ class TabPreview extends React.Component {
                         {/* AI Assistant */}
                         <div className="mt-6 border-t pt-4">
                             <h3 className="text-lg font-semibold text-gray-800 mb-3">🤖 Trợ lý AI</h3>
-                            <div className="flex gap-2 mb-3">
-                                <button className="bg-warning text-black px-3 py-2 rounded hover:bg-yellow-500">
-                                    Tóm tắt lại
+                            
+                            {/* Error Message */}
+                            {aiError && (
+                                <div className="mb-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+                                    ⚠️ {aiError}
+                                </div>
+                            )}
+
+                            {/* AI Buttons */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                <button
+                                    onClick={() => this.handleSummarize()}
+                                    disabled={aiLoading}
+                                    className={`px-3 py-2 rounded ${
+                                        aiLoading 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-warning text-black hover:bg-yellow-500'
+                                    }`}
+                                >
+                                    {aiLoading ? '⏳ Đang xử lý...' : '📝 Tóm tắt lại'}
                                 </button>
-                                <button className="bg-warning text-black px-3 py-2 rounded hover:bg-yellow-500">
-                                    Viết lại trang trọng hơn
-                                </button>
-                                <button className="bg-warning text-black px-3 py-2 rounded hover:bg-yellow-500">
-                                    Trích xuất bảng biểu
+                                <button
+                                    onClick={() => this.handleFormalize()}
+                                    disabled={aiLoading}
+                                    className={`px-3 py-2 rounded ${
+                                        aiLoading 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-warning text-black hover:bg-yellow-500'
+                                    }`}
+                                >
+                                    {aiLoading ? '⏳ Đang xử lý...' : '✍️ Viết lại trang trọng'}
                                 </button>
                             </div>
-                            <textarea
-                                className="w-full p-3 border rounded focus:ring-2 focus:ring-primary"
-                                rows="3"
-                                placeholder="Bạn muốn AI điều chỉnh gì ở văn bản này?"
-                            ></textarea>
+
+                            {/* Custom Instruction */}
+                            <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Yêu cầu tùy chỉnh:
+                                </label>
+                                <textarea
+                                    className="w-full p-3 border rounded focus:ring-2 focus:ring-primary"
+                                    rows="2"
+                                    placeholder="Ví dụ: Trích xuất tất cả các bảng dữ liệu, tìm các ngày tháng quan trọng..."
+                                    value={customInstruction}
+                                    onChange={(e) => this.setState({ customInstruction: e.target.value })}
+                                    disabled={aiLoading}
+                                ></textarea>
+                                <button
+                                    onClick={() => this.handleCustomRefinement()}
+                                    disabled={aiLoading}
+                                    className={`mt-2 px-4 py-2 rounded ${
+                                        aiLoading 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-blue-600'
+                                    }`}
+                                >
+                                    {aiLoading ? '⏳ Đang xử lý...' : '🚀 Thực hiện'}
+                                </button>
+                            </div>
+
+                            {/* AI Response */}
+                            {aiResponse && (
+                                <div className="mt-4">
+                                    <h4 className="text-md font-semibold text-gray-800 mb-2">
+                                        💡 Kết quả AI:
+                                    </h4>
+                                    <div className="bg-blue-50 p-4 rounded border border-blue-200">
+                                        <pre className="whitespace-pre-wrap text-sm text-gray-700">
+                                            {aiResponse}
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

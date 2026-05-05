@@ -84,20 +84,103 @@ class ApiService {
      * Chat with AI
      * @param {string} message - User message
      * @param {string[]} context - Document context
+     * @param {string[]} wings - Optional wings to search
      */
-    async chat(message, context = []) {
+    async chat(message, context = [], wings = []) {
         try {
             const response = await fetch(`${API_BASE_URL}/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message, context }),
+                body: JSON.stringify({ message, context, wings }),
             });
 
             return await response.json();
         } catch (error) {
             console.error('Chat failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Summarize document
+     * @param {string} markdown - Document markdown content
+     */
+    async summarizeDocument(markdown) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/refine/summarize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ markdown }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Summarization failed');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Summarization failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Formalize document
+     * @param {string} markdown - Document markdown content
+     */
+    async formalizeDocument(markdown) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/refine/formalize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ markdown }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Formalization failed');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Formalization failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Custom refinement
+     * @param {string} markdown - Document markdown content
+     * @param {string} instruction - Custom instruction
+     */
+    async customRefinement(markdown, instruction) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/refine/custom`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ markdown, instruction }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Custom refinement failed');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Custom refinement failed:', error);
             throw error;
         }
     }

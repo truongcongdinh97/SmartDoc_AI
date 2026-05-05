@@ -6,7 +6,7 @@
  *
  * Wing: smartdoc_frontend
  * Topic: ui_components
- * Last Updated: 2026-05-05 09:47
+ * Last Updated: 2026-05-05 13:37
  */
 
 const React = require('react');
@@ -19,7 +19,20 @@ class TabRag extends React.Component {
             messages: [],
             inputMessage: '',
             loading: false,
+            selectedWings: [],
+            wings: [],
+            error: null,
         };
+    }
+
+    async componentDidMount() {
+        // Load wings
+        try {
+            const wings = await ApiService.getWings();
+            this.setState({ wings });
+        } catch (error) {
+            console.error('Failed to load wings:', error);
+        }
     }
 
     handleSendMessage() {
@@ -39,20 +52,26 @@ class TabRag extends React.Component {
             messages: newMessages,
             inputMessage: '',
             loading: true,
+            error: null,
         });
 
         // Get document context
         const context = this.props.documents.map(doc => doc.markdown);
 
         // Call AI
-        ApiService.chat(inputMessage, context)
+        ApiService.chat(inputMessage, context, this.state.selectedWings)
             .then((response) => {
-                const aiMessage = response.message?.content || 'Xin lỗi, có lỗi xảy ra.';
+                const aiMessage = response.message?.content || response.response || 'Xin lỗi, có lỗi xảy ra.';
+                const sources = response.sources || [];
 
                 this.setState({
                     messages: [
                         ...newMessages,
-                        { role: 'assistant', content: aiMessage },
+                        { 
+                            role: 'assistant', 
+                            content: aiMessage,
+                            sources: sources
+                        },
                     ],
                     loading: false,
                 });
@@ -64,6 +83,7 @@ class TabRag extends React.Component {
                         { role: 'assistant', content: `Lỗi: ${error.message}` },
                     ],
                     loading: false,
+                    error: `Không thể kết nối tới AI: ${error.message}`
                 });
             });
     }
@@ -75,11 +95,78 @@ class TabRag extends React.Component {
         }
     }
 
+    toggleWing(wing) {
+        this.setState(prevState => ({
+            selectedWings: prevState.selectedWings.includes(wing)
+                ? prevState.selectedWings.filter(w => w !== wing)
+                : [...prevState.selectedWings, wing]
+        }));
+    }
+
+    clearChat() {
+        this.setState({
+            messages: [],
+            error: null
+        });
+    }
+
+    dismissError() {
+        this.setState({ error: null });
+    }
+
     render() {
-        const { messages, inputMessage, loading } = this.state;
+        const { messages, inputMessage, loading, wings, selectedWings, error } = this.state;
 
         return (
             <div className="flex flex-col h-full">
+                {/* Wing Filter */}
+                <div className="border-b bg-white p-3">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-gray-700">Lọc theo loại:</span>
+                            <div className="flex flex-wrap gap-2">
+                                {wings.map(wing => (
+                                    <button
+                                        key={wing}
+                                        onClick={() => this.toggleWing(wing)}
+                                        className={`px-3 py-1 rounded-full text-sm ${
+                                            selectedWings.includes(wing)
+                                                ? 'bg-primary text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {wing}
+                                    </button>
+                                ))}
+                            </div>
+                            {messages.length > 0 && (
+                                <button
+                                    onClick={() => this.clearChat()}
+                                    className="ml-auto text-sm text-gray-600 hover:text-gray-800"
+                                >
+                                    🗑️ Xóa lịch sử
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="mx-6 mt-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-start">
+                        <span className="text-xl mr-2">⚠️</span>
+                        <div className="flex-1">
+                            <p className="text-sm text-red-700">{error}</p>
+                        </div>
+                        <button
+                            onClick={() => this.dismissError()}
+                            className="text-red-500 hover:text-red-700 ml-2"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
+
                 {/* Chat Messages */}
                 <div className="flex-1 overflow-auto p-6 bg-background">
                     <div className="max-w-4xl mx-auto space-y-4">
@@ -115,11 +202,19 @@ class TabRag extends React.Component {
                                     <div className="whitespace-pre-wrap text-base">
                                         {msg.content}
                                     </div>
-                                    {msg.role === 'assistant' && (
+                                    {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
                                         <div className="mt-3 pt-3 border-t">
-                                            <button className="text-sm text-primary hover:underline">
-                                                👁️ Xem tài liệu gốc
-                                            </button>
+                                            <div className="text-xs font-medium text-gray-600 mb-2">
+                                                📚 Nguồn trích dẫn:
+                                            </div>
+                                            <div className="space-y-1">
+                                                {msg.sources.map((source, idx) => (
+                                                    <div key={idx} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                                        <span className="font-medium">File:</span> {source.filename || 'Unknown'}
+                                                        {source.chunk && <span> | <span className="font-medium">Đoạn:</span> {source.chunk}</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -129,9 +224,15 @@ class TabRag extends React.Component {
                         {loading && (
                             <div className="flex justify-start">
                                 <div className="bg-white border shadow-sm p-4 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <div className="animate-spin">⏳</div>
-                                        <span>AI đang suy nghĩ...</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="animate-spin text-2xl">⏳</div>
+                                        <div>
+                                            <div className="font-medium text-gray-800">AI đang suy nghĩ...</div>
+                                            <div className="text-sm text-gray-500">
+                                                Đang tìm kiếm trong {this.props.documents.length} tài liệu
+                                                {selectedWings.length > 0 && ` (${selectedWings.length} loại)`}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
