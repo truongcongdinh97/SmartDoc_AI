@@ -66,6 +66,7 @@ Thumbs.db
 desktop.ini
 
 # Vector Database Data (LanceDB)
+backend/data/lancedb/
 backend/data/*.lance
 backend/data/*.db
 
