@@ -1,14 +1,3 @@
-/**
- * Frontend: TabPreview Component — Document preview and editing interface.
- *
- * Tab 2: Review processed documents with metadata editing.
- * Includes AI assistance for document refinement.
- *
- * Wing: smartdoc_frontend
- * Topic: ui_components
- * Last Updated: 2026-05-05 09:46
- */
-
 const React = require('react');
 const ApiService = require('../services/api');
 
@@ -45,25 +34,16 @@ class TabPreview extends React.Component {
         }
     }
 
-    handleEdit() {
-        this.setState({ editing: true });
-    }
+    handleEdit() { this.setState({ editing: true }); }
 
     handleSave() {
         const { title, date, author, wing } = this.state;
         const updatedDoc = {
             ...this.state.selectedDoc,
-            metadata: {
-                ...this.state.selectedDoc.metadata,
-                title,
-                date,
-                author,
-            },
+            metadata: { ...this.state.selectedDoc.metadata, title, date, author },
             wing,
         };
-
         this.setState({ selectedDoc: updatedDoc, editing: false });
-        // TODO: Send update to backend
     }
 
     handleCancel() {
@@ -76,9 +56,7 @@ class TabPreview extends React.Component {
         });
     }
 
-    handleInputChange(field, value) {
-        this.setState({ [field]: value });
-    }
+    handleInputChange(field, value) { this.setState({ [field]: value }); }
 
     async handleSummarize() {
         this.setState({ aiLoading: true, aiError: null, aiResponse: '' });
@@ -86,10 +64,7 @@ class TabPreview extends React.Component {
             const result = await ApiService.summarizeDocument(this.state.selectedDoc.markdown);
             this.setState({ aiResponse: result.summary, aiLoading: false });
         } catch (error) {
-            this.setState({ 
-                aiError: `Không thể tóm tắt: ${error.message}`, 
-                aiLoading: false 
-            });
+            this.setState({ aiError: 'Không thể tóm tắt: ' + error.message, aiLoading: false });
         }
     }
 
@@ -99,10 +74,7 @@ class TabPreview extends React.Component {
             const result = await ApiService.formalizeDocument(this.state.selectedDoc.markdown);
             this.setState({ aiResponse: result.markdown, aiLoading: false });
         } catch (error) {
-            this.setState({ 
-                aiError: `Không thể viết lại: ${error.message}`, 
-                aiLoading: false 
-            });
+            this.setState({ aiError: 'Không thể viết lại: ' + error.message, aiLoading: false });
         }
     }
 
@@ -113,251 +85,198 @@ class TabPreview extends React.Component {
         }
         this.setState({ aiLoading: true, aiError: null, aiResponse: '' });
         try {
-            const result = await ApiService.customRefinement(
-                this.state.selectedDoc.markdown,
-                this.state.customInstruction
-            );
+            const result = await ApiService.customRefinement(this.state.selectedDoc.markdown, this.state.customInstruction);
             this.setState({ aiResponse: result.markdown, aiLoading: false });
         } catch (error) {
-            this.setState({ 
-                aiError: `Không thể thực hiện yêu cầu: ${error.message}`, 
-                aiLoading: false 
-            });
+            this.setState({ aiError: 'Không thể thực hiện yêu cầu: ' + error.message, aiLoading: false });
         }
     }
 
     render() {
         const { documents, onDocumentSelect } = this.props;
-        const { 
-            selectedDoc, 
-            editing, 
-            title, 
-            date, 
-            author, 
-            wing,
-            aiLoading,
-            aiError,
-            aiResponse,
-            customInstruction
-        } = this.state;
+        const { selectedDoc, editing, title, date, author, wing, aiLoading, aiError, aiResponse, customInstruction } = this.state;
 
         if (!selectedDoc) {
             return (
-                <div className="container mx-auto p-6 text-center">
-                    <div className="text-6xl mb-4">📭</div>
-                    <h3 className="text-xl font-semibold text-gray-600">
-                        Chưa có tài liệu nào được chọn
-                    </h3>
-                    <p className="text-gray-500 mt-2">Vui lòng xử lý tài liệu ở Tab 1 trước</p>
+                <div className="flex items-center justify-center h-full">
+                    <div className="text-center animate-fade-in">
+                        <div className="w-24 h-24 mx-auto bg-gray-100 rounded-3xl flex items-center justify-center mb-5">
+                            <span className="text-5xl">{'\u{1F4ED}'}</span>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-400">Chưa có tài liệu nào được chọn</h3>
+                        <p className="text-sm text-gray-400 mt-2">Vui lòng xử lý tài liệu ở tab <strong>Tiếp nhận & Quét</strong> trước</p>
+                    </div>
                 </div>
             );
         }
 
         return (
-            <div className="flex h-full">
-                {/* Document List */}
-                <div className="w-1/4 border-r bg-white overflow-auto p-4">
-                    <h3 className="font-bold mb-4 text-gray-800">Danh sách tài liệu</h3>
-                    <ul className="space-y-2">
+            <div className="flex h-full animate-fade-in">
+                <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+                    <div className="p-4 border-b border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{'\u{1F4C1}'} Danh sách tài liệu</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{documents.length} tài liệu</p>
+                    </div>
+                    <div className="flex-1 overflow-auto p-3 space-y-1.5">
                         {documents.map((doc, index) => (
-                            <li
+                            <button
                                 key={index}
                                 onClick={() => onDocumentSelect(doc)}
-                                className={`p-3 rounded cursor-pointer transition-colors ${
+                                className={`w-full text-left p-3 rounded-xl transition-all ${
                                     doc === selectedDoc
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                                        ? 'bg-primary-50 border border-primary-200 shadow-sm'
+                                        : 'hover:bg-gray-50 border border-transparent'
                                 }`}
                             >
-                                <div className="font-medium truncate">{doc.filename}</div>
-                                <div className="text-sm opacity-75">{doc.wing}</div>
-                            </li>
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                        doc === selectedDoc ? 'bg-primary-100' : 'bg-gray-100'
+                                    }`}>
+                                        <span className="text-sm">{'\u{1F4C4}'}</span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`text-sm font-medium truncate ${doc === selectedDoc ? 'text-primary-700' : 'text-gray-700'}`}>
+                                            {doc.filename}
+                                        </p>
+                                        <p className={`text-xs ${doc === selectedDoc ? 'text-primary-400' : 'text-gray-400'}`}>
+                                            {doc.wing || 'Chưa phân loại'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </button>
                         ))}
-                    </ul>
+                    </div>
                 </div>
 
-                {/* Document Preview */}
-                <div className="flex-1 overflow-auto p-6 bg-background">
-                    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
-                        {/* Metadata Header */}
-                        <div className="mb-6 border-b pb-4">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Thông tin tài liệu</h2>
-
-                            {editing ? (
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Tiêu đề:
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => this.handleInputChange('title', e.target.value)}
-                                            className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Ngày tháng:
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={date}
-                                            onChange={(e) => this.handleInputChange('date', e.target.value)}
-                                            className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Tác giả/Phòng ban:
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={author}
-                                            onChange={(e) => this.handleInputChange('author', e.target.value)}
-                                            className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Loại tài liệu (Wing):
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={wing}
-                                            onChange={(e) => this.handleInputChange('wing', e.target.value)}
-                                            className="w-full p-2 border rounded focus:ring-2 focus:ring-primary"
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 mt-4">
-                                        <button
-                                            onClick={() => this.handleSave()}
-                                            className="bg-success text-white px-4 py-2 rounded hover:bg-green-600"
-                                        >
-                                            💾 Lưu
+                <div className="flex-1 overflow-auto bg-gray-50/50">
+                    <div className="max-w-4xl mx-auto p-6 space-y-5">
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-slide-up">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-base font-semibold text-gray-800">{'\u{1F4CB}'} Thông tin tài liệu</h2>
+                                    {!editing && (
+                                        <button onClick={() => this.handleEdit()}
+                                            className="text-xs text-primary-600 hover:text-primary-700 font-medium px-3 py-1.5 rounded-lg bg-primary-50 hover:bg-primary-100 transition-colors">
+                                            {'\u270F\uFE0F'} Chỉnh sửa
                                         </button>
-                                        <button
-                                            onClick={() => this.handleCancel()}
-                                            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
-                                        >
-                                            ✗ Hủy
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-600">Tiêu đề: </span>
-                                        <span className="text-gray-800">{title || 'Chưa có'}</span>
+                            </div>
+                            <div className="px-6 py-4">
+                                {editing ? (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {[
+                                            { label: 'Tiêu đề', field: 'title', value: title },
+                                            { label: 'Ngày tháng', field: 'date', value: date },
+                                            { label: 'Tác giả / Phòng ban', field: 'author', value: author },
+                                            { label: 'Loại tài liệu (Wing)', field: 'wing', value: wing },
+                                        ].map(f => (
+                                            <div key={f.field}>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}</label>
+                                                <input type="text" value={f.value}
+                                                    onChange={(e) => this.handleInputChange(f.field, e.target.value)}
+                                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none transition-all" />
+                                            </div>
+                                        ))}
+                                        <div className="col-span-2 flex gap-2 pt-2">
+                                            <button onClick={() => this.handleSave()}
+                                                className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-all active:scale-95">
+                                                {'\u{1F4BE}'} Lưu thay đổi
+                                            </button>
+                                            <button onClick={() => this.handleCancel()}
+                                                className="px-4 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition-all">
+                                                {'\u2715'} Hủy
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-600">Ngày: </span>
-                                        <span className="text-gray-800">{date || 'Chưa có'}</span>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {[
+                                            { label: 'Tiêu đề', value: title || 'Chưa có', icon: '\u{1F3F7}\uFE0F' },
+                                            { label: 'Ngày tháng', value: date || 'Chưa có', icon: '\u{1F4C5}' },
+                                            { label: 'Tác giả', value: author || 'Chưa có', icon: '\u{1F464}' },
+                                            { label: 'Wing', value: wing || 'Chưa phân loại', icon: '\u{1F3F7}\uFE0F' },
+                                        ].map((item, i) => (
+                                            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                <span className="text-lg">{item.icon}</span>
+                                                <div>
+                                                    <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">{item.label}</p>
+                                                    <p className="text-sm font-medium text-gray-700">{item.value}</p>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-600">Tác giả: </span>
-                                        <span className="text-gray-800">{author || 'Chưa có'}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-slide-up">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                                <h3 className="text-base font-semibold text-gray-800">{'\u{1F4D6}'} Nội dung tài liệu</h3>
+                            </div>
+                            <div className="p-6">
+                                <div className="bg-gray-50 rounded-xl border border-gray-100 overflow-auto max-h-96 p-4">
+                                    <pre className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-mono">
+                                        {selectedDoc.markdown}
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-slide-up">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                                <h3 className="text-base font-semibold text-gray-800">{'\u{1F916}'} Trợ lý AI</h3>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                {aiError && (
+                                    <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
+                                        <span className="text-lg flex-shrink-0">{'\u26A0\uFE0F'}</span>
+                                        <p className="text-sm text-red-700">{aiError}</p>
                                     </div>
-                                    <div>
-                                        <span className="text-sm font-medium text-gray-600">Wing: </span>
-                                        <span className="text-gray-800">{wing || 'Chưa phân loại'}</span>
-                                    </div>
-                                    <button
-                                        onClick={() => this.handleEdit()}
-                                        className="mt-4 bg-primary text-white px-4 py-2 rounded hover:bg-blue-600"
-                                    >
-                                        ✏️ Chỉnh sửa thông tin
+                                )}
+
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => this.handleSummarize()} disabled={aiLoading}
+                                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+                                            aiLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                                        }`}>
+                                        {aiLoading ? '\u23F3 Đang xử lý...' : '\u{1F4DD} Tóm tắt lại'}
+                                    </button>
+                                    <button onClick={() => this.handleFormalize()} disabled={aiLoading}
+                                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-95 ${
+                                            aiLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'
+                                        }`}>
+                                        {aiLoading ? '\u23F3 Đang xử lý...' : '\u270D\uFE0F Viết lại trang trọng'}
                                     </button>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Markdown Content */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Nội dung tài liệu</h3>
-                            <div className="bg-gray-50 p-4 rounded border overflow-auto max-h-96">
-                                <pre className="whitespace-pre-wrap text-sm text-gray-700">
-                                    {selectedDoc.markdown}
-                                </pre>
-                            </div>
-                        </div>
-
-                        {/* AI Assistant */}
-                        <div className="mt-6 border-t pt-4">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-3">🤖 Trợ lý AI</h3>
-                            
-                            {/* Error Message */}
-                            {aiError && (
-                                <div className="mb-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-                                    ⚠️ {aiError}
-                                </div>
-                            )}
-
-                            {/* AI Buttons */}
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                <button
-                                    onClick={() => this.handleSummarize()}
-                                    disabled={aiLoading}
-                                    className={`px-3 py-2 rounded ${
-                                        aiLoading 
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-warning text-black hover:bg-yellow-500'
-                                    }`}
-                                >
-                                    {aiLoading ? '⏳ Đang xử lý...' : '📝 Tóm tắt lại'}
-                                </button>
-                                <button
-                                    onClick={() => this.handleFormalize()}
-                                    disabled={aiLoading}
-                                    className={`px-3 py-2 rounded ${
-                                        aiLoading 
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-warning text-black hover:bg-yellow-500'
-                                    }`}
-                                >
-                                    {aiLoading ? '⏳ Đang xử lý...' : '✍️ Viết lại trang trọng'}
-                                </button>
-                            </div>
-
-                            {/* Custom Instruction */}
-                            <div className="mb-3">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Yêu cầu tùy chỉnh:
-                                </label>
-                                <textarea
-                                    className="w-full p-3 border rounded focus:ring-2 focus:ring-primary"
-                                    rows="2"
-                                    placeholder="Ví dụ: Trích xuất tất cả các bảng dữ liệu, tìm các ngày tháng quan trọng..."
-                                    value={customInstruction}
-                                    onChange={(e) => this.setState({ customInstruction: e.target.value })}
-                                    disabled={aiLoading}
-                                ></textarea>
-                                <button
-                                    onClick={() => this.handleCustomRefinement()}
-                                    disabled={aiLoading}
-                                    className={`mt-2 px-4 py-2 rounded ${
-                                        aiLoading 
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-primary text-white hover:bg-blue-600'
-                                    }`}
-                                >
-                                    {aiLoading ? '⏳ Đang xử lý...' : '🚀 Thực hiện'}
-                                </button>
-                            </div>
-
-                            {/* AI Response */}
-                            {aiResponse && (
-                                <div className="mt-4">
-                                    <h4 className="text-md font-semibold text-gray-800 mb-2">
-                                        💡 Kết quả AI:
-                                    </h4>
-                                    <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                                        <pre className="whitespace-pre-wrap text-sm text-gray-700">
-                                            {aiResponse}
-                                        </pre>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Yêu cầu tùy chỉnh</label>
+                                    <div className="flex gap-2">
+                                        <textarea
+                                            className="flex-1 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none resize-none transition-all"
+                                            rows="2" placeholder="Ví dụ: Trích xuất bảng dữ liệu, tìm ngày tháng quan trọng..."
+                                            value={customInstruction}
+                                            onChange={(e) => this.setState({ customInstruction: e.target.value })}
+                                            disabled={aiLoading} />
+                                        <button onClick={() => this.handleCustomRefinement()} disabled={aiLoading}
+                                            className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all self-end active:scale-95 ${
+                                                aiLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-primary-600 text-white hover:bg-primary-700 shadow-sm shadow-primary-200'
+                                            }`}>
+                                            {aiLoading ? '\u23F3' : '\u{1F680} Thực hiện'}
+                                        </button>
                                     </div>
                                 </div>
-                            )}
+
+                                {aiResponse && (
+                                    <div className="animate-slide-up">
+                                        <h4 className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">{'\u{1F4A1}'} Kết quả AI</h4>
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 p-5 rounded-xl border border-blue-100">
+                                            <pre className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-sans">{aiResponse}</pre>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

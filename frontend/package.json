@@ -4,16 +4,26 @@
   "description": "SmartDoc AI - Quản lý Tài liệu Thông minh",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node build-react.js && electron .",
     "build": "electron-builder",
-    "dev": "concurrently \"node build-react.js\" \"electron .\""
+    "dev": "concurrently \"node build-react.js\" \"electron .\"",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./public/tailwind.css"
   },
-  "keywords": ["electron", "document-management", "ai", "rag"],
+  "keywords": [
+    "electron",
+    "document-management",
+    "ai",
+    "rag"
+  ],
   "author": "SmartDoc AI Team",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
+    "autoprefixer": "^10.5.0",
     "electron": "^30.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "tailwindcss": "^3.4.19"
   },
   "dependencies": {
     "react": "^18.2.0",

@@ -1,14 +1,3 @@
-/**
- * Frontend: TabRag Component — RAG chat interface.
- *
- * Tab 3: Chat with AI using document context.
- * Displays sources and citations from retrieved documents.
- *
- * Wing: smartdoc_frontend
- * Topic: ui_components
- * Last Updated: 2026-05-05 13:37
- */
-
 const React = require('react');
 const ApiService = require('../services/api').default;
 
@@ -23,10 +12,10 @@ class TabRag extends React.Component {
             wings: [],
             error: null,
         };
+        this.messagesEndRef = React.createRef();
     }
 
     async componentDidMount() {
-        // Load wings
         try {
             const wings = await ApiService.getWings();
             this.setState({ wings });
@@ -35,55 +24,34 @@ class TabRag extends React.Component {
         }
     }
 
+    componentDidUpdate() {
+        this.messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+
     handleSendMessage() {
         const { inputMessage, messages } = this.state;
+        if (!inputMessage.trim()) return;
 
-        if (!inputMessage.trim()) {
-            return;
-        }
+        const newMessages = [...messages, { role: 'user', content: inputMessage }];
 
-        // Add user message
-        const newMessages = [
-            ...messages,
-            { role: 'user', content: inputMessage },
-        ];
+        this.setState({ messages: newMessages, inputMessage: '', loading: true, error: null });
 
-        this.setState({
-            messages: newMessages,
-            inputMessage: '',
-            loading: true,
-            error: null,
-        });
-
-        // Get document context
         const context = this.props.documents.map(doc => doc.markdown);
 
-        // Call AI
         ApiService.chat(inputMessage, context, this.state.selectedWings)
             .then((response) => {
                 const aiMessage = response.message?.content || response.response || 'Xin lỗi, có lỗi xảy ra.';
                 const sources = response.sources || [];
-
                 this.setState({
-                    messages: [
-                        ...newMessages,
-                        { 
-                            role: 'assistant', 
-                            content: aiMessage,
-                            sources: sources
-                        },
-                    ],
+                    messages: [...newMessages, { role: 'assistant', content: aiMessage, sources }],
                     loading: false,
                 });
             })
             .catch((error) => {
                 this.setState({
-                    messages: [
-                        ...newMessages,
-                        { role: 'assistant', content: `Lỗi: ${error.message}` },
-                    ],
+                    messages: [...newMessages, { role: 'assistant', content: 'Lỗi: ' + error.message }],
                     loading: false,
-                    error: `Không thể kết nối tới AI: ${error.message}`
+                    error: 'Không thể kết nối tới AI: ' + error.message,
                 });
             });
     }
@@ -103,169 +71,164 @@ class TabRag extends React.Component {
         }));
     }
 
-    clearChat() {
-        this.setState({
-            messages: [],
-            error: null
-        });
-    }
-
-    dismissError() {
-        this.setState({ error: null });
-    }
+    clearChat() { this.setState({ messages: [], error: null }); }
+    dismissError() { this.setState({ error: null }); }
 
     render() {
         const { messages, inputMessage, loading, wings, selectedWings, error } = this.state;
 
         return (
-            <div className="flex flex-col h-full">
-                {/* Wing Filter */}
-                <div className="border-b bg-white p-3">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-gray-700">Lọc theo loại:</span>
-                            <div className="flex flex-wrap gap-2">
-                                {wings.map(wing => (
-                                    <button
-                                        key={wing}
-                                        onClick={() => this.toggleWing(wing)}
-                                        className={`px-3 py-1 rounded-full text-sm ${
-                                            selectedWings.includes(wing)
-                                                ? 'bg-primary text-white'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        {wing}
-                                    </button>
-                                ))}
-                            </div>
-                            {messages.length > 0 && (
-                                <button
-                                    onClick={() => this.clearChat()}
-                                    className="ml-auto text-sm text-gray-600 hover:text-gray-800"
-                                >
-                                    🗑️ Xóa lịch sử
-                                </button>
-                            )}
-                        </div>
+            <div className="flex flex-col h-full bg-gray-50/50">
+                <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 flex-shrink-0">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{'\u{1F3F7}\uFE0F'} Lọc:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                        {wings.map(wing => (
+                            <button key={wing} onClick={() => this.toggleWing(wing)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                                    selectedWings.includes(wing)
+                                        ? 'bg-primary-600 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}>
+                                {wing}
+                            </button>
+                        ))}
+                        {wings.length === 0 && (
+                            <span className="text-xs text-gray-400 italic">Chưa có loại tài liệu</span>
+                        )}
                     </div>
+                    {messages.length > 0 && (
+                        <button onClick={() => this.clearChat()}
+                            className="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-red-50">
+                            {'\u{1F5D1}\uFE0F'} Xóa lịch sử
+                        </button>
+                    )}
                 </div>
 
-                {/* Error Message */}
                 {error && (
-                    <div className="mx-6 mt-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-start">
-                        <span className="text-xl mr-2">⚠️</span>
-                        <div className="flex-1">
-                            <p className="text-sm text-red-700">{error}</p>
-                        </div>
-                        <button
-                            onClick={() => this.dismissError()}
-                            className="text-red-500 hover:text-red-700 ml-2"
-                        >
-                            ✕
-                        </button>
+                    <div className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 animate-slide-up flex-shrink-0">
+                        <span className="text-lg flex-shrink-0">{'\u26A0\uFE0F'}</span>
+                        <p className="text-sm text-red-700 flex-1">{error}</p>
+                        <button onClick={() => this.dismissError()} className="text-red-400 hover:text-red-600">{'\u2715'}</button>
                     </div>
                 )}
 
-                {/* Chat Messages */}
-                <div className="flex-1 overflow-auto p-6 bg-background">
+                <div className="flex-1 overflow-auto px-6 py-4">
                     <div className="max-w-4xl mx-auto space-y-4">
                         {messages.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="text-6xl mb-4">💬</div>
-                                <h3 className="text-xl font-semibold text-gray-800">
-                                    Hỏi đáp với Tài liệu của bạn
-                                </h3>
-                                <p className="text-gray-600 mt-2">
-                                    Hãy đặt câu hỏi về các tài liệu đã được lưu vào kho
-                                </p>
+                            <div className="flex items-center justify-center h-full min-h-[400px]">
+                                <div className="text-center animate-fade-in">
+                                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary-100 to-accent-100 rounded-3xl flex items-center justify-center mb-5">
+                                        <span className="text-4xl">{'\u{1F4AC}'}</span>
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-gray-700">Hỏi đáp với Tài liệu</h3>
+                                    <p className="text-sm text-gray-400 mt-2 max-w-sm">
+                                        Đặt câu hỏi về tài liệu đã lưu. AI sẽ tìm kiếm và trả lời dựa trên nội dung tài liệu của bạn.
+                                    </p>
+                                    <div className="flex items-center gap-4 mt-6 justify-center text-xs text-gray-400">
+                                        <span className="flex items-center gap-1">{'\u{1F4C4}'} {this.props.documents.length} tài liệu</span>
+                                        <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                        <span className="flex items-center gap-1">{'\u{1F916}'} Gemini AI</span>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         {messages.map((msg, index) => (
-                            <div
-                                key={index}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`max-w-2xl p-4 rounded-lg ${
-                                        msg.role === 'user'
-                                            ? 'bg-primary text-white'
-                                            : 'bg-white border shadow-sm'
-                                    }`}
-                                >
+                            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                                <div className={`max-w-[70%] ${msg.role === 'user' ? 'order-1' : 'order-1'}`}>
                                     {msg.role === 'assistant' && (
-                                        <div className="text-sm font-medium text-primary mb-2">
-                                            🤖 AI Assistant
+                                        <div className="flex items-center gap-2 mb-1.5 px-1">
+                                            <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center">
+                                                <span className="text-[10px]">{'\u{1F916}'}</span>
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-500">AI Assistant</span>
                                         </div>
                                     )}
-                                    <div className="whitespace-pre-wrap text-base">
-                                        {msg.content}
+                                    <div className={`px-4 py-3 ${
+                                        msg.role === 'user'
+                                            ? 'bg-primary-600 text-white rounded-2xl rounded-tr-md shadow-sm shadow-primary-200'
+                                            : 'bg-white border border-gray-100 rounded-2xl rounded-tl-md shadow-sm'
+                                    }`}>
+                                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'text-white' : 'text-gray-700'}`}>
+                                            {msg.content}
+                                        </p>
+                                        {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                                <p className="text-[11px] font-medium text-gray-400 mb-1.5">{'\u{1F4DA}'} Nguồn trích dẫn</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {msg.sources.map((source, idx) => (
+                                                        <span key={idx} className="text-[11px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100">
+                                                            {source.filename || 'Unknown'}{source.chunk ? ` (#${source.chunk})` : ''}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                                        <div className="mt-3 pt-3 border-t">
-                                            <div className="text-xs font-medium text-gray-600 mb-2">
-                                                📚 Nguồn trích dẫn:
-                                            </div>
-                                            <div className="space-y-1">
-                                                {msg.sources.map((source, idx) => (
-                                                    <div key={idx} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                                        <span className="font-medium">File:</span> {source.filename || 'Unknown'}
-                                                        {source.chunk && <span> | <span className="font-medium">Đoạn:</span> {source.chunk}</span>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ))}
 
                         {loading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white border shadow-sm p-4 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <div className="animate-spin text-2xl">⏳</div>
-                                        <div>
-                                            <div className="font-medium text-gray-800">AI đang suy nghĩ...</div>
-                                            <div className="text-sm text-gray-500">
-                                                Đang tìm kiếm trong {this.props.documents.length} tài liệu
-                                                {selectedWings.length > 0 && ` (${selectedWings.length} loại)`}
-                                            </div>
+                            <div className="flex justify-start animate-fade-in">
+                                <div className="max-w-[70%]">
+                                    <div className="flex items-center gap-2 mb-1.5 px-1">
+                                        <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center">
+                                            <span className="text-[10px]">{'\u{1F916}'}</span>
                                         </div>
+                                        <span className="text-xs font-medium text-gray-500">AI Assistant</span>
+                                    </div>
+                                    <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-md shadow-sm px-5 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                                <span className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                                <span className="w-2 h-2 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                            </div>
+                                            <span className="text-sm text-gray-400 ml-2">AI đang suy nghĩ...</span>
+                                        </div>
+                                        <p className="text-xs text-gray-300 mt-2">
+                                            Đang tìm kiếm trong {this.props.documents.length} tài liệu
+                                            {selectedWings.length > 0 && ` (${selectedWings.length} loại)`}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         )}
+                        <div ref={this.messagesEndRef} />
                     </div>
                 </div>
 
-                {/* Input Area */}
-                <div className="border-t bg-white p-4">
-                    <div className="max-w-4xl mx-auto flex gap-2">
-                        <textarea
-                            value={inputMessage}
-                            onChange={(e) => this.setState({ inputMessage: e.target.value })}
-                            onKeyPress={(e) => this.handleKeyPress(e)}
-                            placeholder="Nhập câu hỏi của bạn..."
-                            className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-primary resize-none"
-                            rows="3"
-                            disabled={loading}
-                        ></textarea>
-                        <button
-                            onClick={() => this.handleSendMessage()}
-                            disabled={loading || !inputMessage.trim()}
-                            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
-                        >
-                            Gửi
-                        </button>
-                    </div>
-                </div>
-
-                {/* Source Info */}
-                <div className="border-t bg-gray-50 p-2">
-                    <div className="max-w-4xl mx-auto text-sm text-gray-600">
-                        📚 Nguồn dữ liệu: {this.props.documents.length} tài liệu đã lưu
+                <div className="border-t border-gray-200 bg-white px-6 py-4 flex-shrink-0">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="flex gap-3 items-end">
+                            <div className="flex-1 relative">
+                                <textarea
+                                    value={inputMessage}
+                                    onChange={(e) => this.setState({ inputMessage: e.target.value })}
+                                    onKeyPress={(e) => this.handleKeyPress(e)}
+                                    placeholder="Nhập câu hỏi của bạn... (Enter để gửi, Shift+Enter để xuống dòng)"
+                                    className="w-full px-4 py-3 pr-12 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none resize-none transition-all bg-gray-50/50"
+                                    rows="2"
+                                    disabled={loading} />
+                            </div>
+                            <button
+                                onClick={() => this.handleSendMessage()}
+                                disabled={loading || !inputMessage.trim()}
+                                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all active:scale-95 flex items-center gap-2 ${
+                                    loading || !inputMessage.trim()
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-primary-600 text-white hover:bg-primary-700 shadow-sm shadow-primary-200'
+                                }`}>
+                                Gửi {'\u2192'}
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                            <span className="text-[11px] text-gray-400">
+                                {'\u{1F4DA}'} Nguồn: {this.props.documents.length} tài liệu đã lưu
+                            </span>
+                            <span className="text-[11px] text-gray-300">{'\u21E7'} Enter {'\u21A9'}</span>
+                        </div>
                     </div>
                 </div>
             </div>

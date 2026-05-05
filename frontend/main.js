@@ -16,25 +16,27 @@ let mainWindow = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: 1280,
+        height: 860,
         minWidth: 1024,
         minHeight: 600,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
+            webSecurity: false,
         },
         icon: path.join(__dirname, '../assets/icon.png'),
+        show: false,
+        backgroundColor: '#f8f9fa',
     });
 
-    // Load index.html
     mainWindow.loadFile(path.join(__dirname, 'public/index.html'));
 
-    // Open DevTools in development
-    if (process.env.NODE_ENV === 'development') {
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
         mainWindow.webContents.openDevTools();
-    }
+    });
 
     mainWindow.on('closed', () => {
         mainWindow = null;

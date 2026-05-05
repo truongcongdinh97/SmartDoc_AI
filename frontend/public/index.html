@@ -1,42 +1,42 @@
 <!DOCTYPE html>
 <html lang="vi">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-     <title>SmartDoc AI - Quản lý Tài liệu Thông minh</title>
-     <link rel="stylesheet" href="styles.css">
-     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-                sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            background-color: #f8f9fa;
-            font-size: 14px;
-        }
-
-        code {
-            font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-                monospace;
-        }
-
-        #root {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-        }
-    </style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartDoc AI - Quản lý Tài liệu Thông minh</title>
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        // Error boundary - catch and display any JS errors
+        window.addEventListener('error', function(e) {
+            var errDiv = document.getElementById('error-display');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'error-display';
+                errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e2e;color:#f38ba8;font-family:monospace;padding:40px;z-index:99999;overflow:auto;font-size:14px;line-height:1.6';
+                document.body.appendChild(errDiv);
+            }
+            errDiv.innerHTML += '<div style="margin-bottom:8px;border-left:3px solid #f38ba8;padding-left:12px"><strong>ERROR:</strong> ' + (e.message || e.error || e) + '<br><small>' + (e.filename || '') + ':' + (e.lineno || '') + '</small></div>';
+            console.error(e);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            var errDiv = document.getElementById('error-display');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'error-display';
+                errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#1e1e2e;color:#f38ba8;font-family:monospace;padding:40px;z-index:99999;overflow:auto;font-size:14px;line-height:1.6';
+                document.body.appendChild(errDiv);
+            }
+            errDiv.innerHTML += '<div style="margin-bottom:8px;border-left:3px solid #fab387;padding-left:12px"><strong>PROMISE ERROR:</strong> ' + (e.reason || e) + '</div>';
+            console.error(e);
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('root').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#64748b;font-family:system-ui,sans-serif"><div style="text-align:center"><div style="font-size:48px;margin-bottom:16px">\u23F3</div><div style="font-size:18px;font-weight:600">\u0110ang t\u1EA3i SmartDoc AI...</div><div style="font-size:13px;margin-top:8px;color:#94a3b8">Vui l\u00F2ng ch\u1EDD trong gi\u00E2y l\u00E1t</div></div></div>';
+        });
+    </script>
 </head>
 <body>
     <div id="root"></div>
-    <script src="./app.js"></script>
+    <script src="./app.js" onerror="console.error('FAILED TO LOAD app.js')"></script>
 </body>
 </html>

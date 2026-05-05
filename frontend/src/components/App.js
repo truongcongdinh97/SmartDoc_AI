@@ -1,16 +1,3 @@
-/**
- * Frontend: App Component — Main application with 3-tab interface.
- *
- * Manages tab navigation and overall app state.
- * Tab 1: Input & Scan (file upload)
- * Tab 2: Preview & Refine (document review)
- * Tab 3: RAG Chat (AI conversation)
- *
- * Wing: smartdoc_frontend
- * Topic: main_component
- * Last Updated: 2026-05-05 13:50
- */
-
 const React = require('react');
 const TabInput = require('./TabInput').default;
 const TabPreview = require('./TabPreview').default;
@@ -21,7 +8,7 @@ class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            activeTab: 'input', // 'input', 'preview', 'rag'
+            activeTab: 'input',
             backendStatus: 'checking',
             ollamaRunning: false,
             documents: [],
@@ -46,7 +33,6 @@ class App extends React.Component {
     }
 
     handleKeyDown(e) {
-        // Keyboard shortcuts: Alt+1, Alt+2, Alt+3 for tab navigation
         if (e.altKey && e.key >= '1' && e.key <= '3') {
             e.preventDefault();
             const tabs = ['input', 'preview', 'rag'];
@@ -62,11 +48,7 @@ class App extends React.Component {
                 ollamaRunning: health.ollama_running,
             });
         } catch (error) {
-            this.setState({
-                backendStatus: 'error',
-                ollamaRunning: false,
-            });
-            console.error('Backend health check failed:', error);
+            this.setState({ backendStatus: 'error', ollamaRunning: false });
         }
     }
 
@@ -84,10 +66,9 @@ class App extends React.Component {
         try {
             await ApiService.startOllama();
             this.showNotification('Đang khởi động Ollama...', 'info');
-            // Recheck after a delay
             setTimeout(() => this.checkBackend(), 3000);
         } catch (error) {
-            this.showNotification(`Không thể khởi động Ollama: ${error.message}`, 'error');
+            this.showNotification('Không thể khởi động Ollama: ' + error.message, 'error');
         } finally {
             this.setState({ loading: false });
         }
@@ -99,7 +80,7 @@ class App extends React.Component {
             currentDocument: document,
             activeTab: 'preview',
         }));
-        this.showNotification(`Đã xử lý thành công: ${document.filename}`, 'success');
+        this.showNotification('Đã xử lý thành công: ' + document.filename, 'success');
     }
 
     handleDocumentSelect(doc) {
@@ -109,110 +90,90 @@ class App extends React.Component {
     render() {
         const { activeTab, backendStatus, ollamaRunning, documents, currentDocument, notification, loading } = this.state;
 
+        const tabs = [
+            { key: 'input', label: 'Tiếp nhận & Quét', icon: '\u{1F4E5}', shortcut: '1' },
+            { key: 'preview', label: 'Kiểm duyệt & Chỉnh sửa', icon: '\u{1F4DD}', shortcut: '2' },
+            { key: 'rag', label: 'Tra cứu & Hỏi đáp', icon: '\u{1F4AC}', shortcut: '3' },
+        ];
+
         return (
-            <div className="flex flex-col h-screen bg-background">
-                {/* Header */}
-                <header className="bg-primary text-white p-4 shadow-md">
-                    <div className="container mx-auto flex justify-between items-center">
-                        <div>
-                            <h1 className="text-xl font-bold">📄 SmartDoc AI</h1>
-                            <p className="text-xs text-blue-100 mt-1">Quản lý tài liệu thông minh</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className={`px-2 py-1 rounded text-xs ${
-                                backendStatus === 'healthy' ? 'bg-green-500' : 'bg-red-500'
-                            }`}>
-                                Backend: {backendStatus === 'healthy' ? '✓ Online' : '✗ Offline'}
+            <div className="flex flex-col h-screen bg-background text-gray-900 font-sans antialiased">
+                <header className="bg-gradient-to-r from-primary-700 via-primary-600 to-primary-500 text-white shadow-lg flex-shrink-0">
+                    <div className="px-6 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-lg">{'\u{1F4C4}'}</span>
                             </div>
-                            <div className={`px-2 py-1 rounded text-xs ${
-                                ollamaRunning ? 'bg-green-500' : 'bg-red-500'
+                            <div>
+                                <h1 className="text-lg font-semibold tracking-tight">SmartDoc AI</h1>
+                                <p className="text-[11px] text-blue-100/80 -mt-0.5">Quản lý tài liệu thông minh</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium backdrop-blur-sm transition-all ${
+                                backendStatus === 'healthy' ? 'bg-emerald-500/25 text-emerald-100' : 'bg-red-500/25 text-red-100'
                             }`}>
-                                Ollama: {ollamaRunning ? '✓ Running' : '✗ Stopped'}
+                                <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === 'healthy' ? 'bg-emerald-400 animate-pulse-dot' : 'bg-red-400'}`}></span>
+                                {backendStatus === 'healthy' ? 'Backend Online' : 'Backend Offline'}
+                            </div>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium backdrop-blur-sm transition-all ${
+                                ollamaRunning ? 'bg-emerald-500/25 text-emerald-100' : 'bg-amber-500/25 text-amber-100'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${ollamaRunning ? 'bg-emerald-400 animate-pulse-dot' : 'bg-amber-400'}`}></span>
+                                {ollamaRunning ? 'Ollama Running' : 'Ollama Stopped'}
                             </div>
                             {!ollamaRunning && (
                                 <button
                                     onClick={() => this.handleStartOllama()}
                                     disabled={loading}
-                                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                                        loading 
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-warning text-black hover:bg-yellow-500'
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                        loading ? 'bg-white/10 text-white/50 cursor-not-allowed' : 'bg-white/20 hover:bg-white/30 text-white active:scale-95'
                                     }`}
-                                    title="Khởi động dịch vụ AI"
                                 >
-                                    {loading ? '⏳' : '▶️'} Khởi động
+                                    {loading ? '\u{23F3} Đang khởi động...' : '\u{25B6} Khởi động AI'}
                                 </button>
                             )}
                         </div>
                     </div>
                 </header>
 
-                {/* Notification Toast */}
                 {notification && (
-                    <div className={`fixed top-20 right-4 px-4 py-3 rounded-lg shadow-lg z-50 animate-pulse ${
-                        notification.type === 'success' ? 'bg-green-500 text-white' :
-                        notification.type === 'error' ? 'bg-red-500 text-white' :
-                        'bg-blue-500 text-white'
+                    <div className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md animate-slide-up ${
+                        notification.type === 'success' ? 'bg-emerald-600/95 text-white' :
+                        notification.type === 'error' ? 'bg-red-600/95 text-white' :
+                        'bg-blue-600/95 text-white'
                     }`}>
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">
-                                {notification.type === 'success' ? '✅' :
-                                 notification.type === 'error' ? '❌' : 'ℹ️'}
-                            </span>
-                            <span>{notification.message}</span>
-                            <button
-                                onClick={() => this.setState({ notification: null })}
-                                className="ml-2 hover:opacity-75"
-                            >
-                                ✕
-                            </button>
-                        </div>
+                        <span className="text-lg">
+                            {notification.type === 'success' ? '\u2705' : notification.type === 'error' ? '\u274C' : '\u2139\uFE0F'}
+                        </span>
+                        <span className="text-sm font-medium">{notification.message}</span>
+                        <button onClick={() => this.setState({ notification: null })} className="ml-2 hover:opacity-70">
+                            {'\u2715'}
+                        </button>
                     </div>
                 )}
 
-                {/* Tab Navigation */}
-                <nav className="bg-white border-b shadow-sm">
-                    <div className="container mx-auto flex">
-                        <button
-                            onClick={() => this.handleTabChange('input')}
-                            className={`flex-1 py-4 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset ${
-                                activeTab === 'input'
-                                    ? 'bg-primary text-white border-b-4 border-blue-600'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-b-4 border-transparent'
-                            }`}
-                            title="Upload và xử lý PDF (Alt+1)"
-                        >
-                            <span className="text-2xl mr-2">📥</span>
-                            Tiếp nhận & Quét
-                        </button>
-                        <button
-                            onClick={() => this.handleTabChange('preview')}
-                            className={`flex-1 py-4 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset ${
-                                activeTab === 'preview'
-                                    ? 'bg-primary text-white border-b-4 border-blue-600'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-b-4 border-transparent'
-                            }`}
-                            title="Xem và chỉnh sửa tài liệu (Alt+2)"
-                        >
-                            <span className="text-2xl mr-2">📝</span>
-                            Kiểm duyệt & Chỉnh sửa
-                        </button>
-                        <button
-                            onClick={() => this.handleTabChange('rag')}
-                            className={`flex-1 py-4 text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset ${
-                                activeTab === 'rag'
-                                    ? 'bg-primary text-white border-b-4 border-blue-600'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-b-4 border-transparent'
-                            }`}
-                            title="Chat với AI (Alt+3)"
-                        >
-                            <span className="text-2xl mr-2">💬</span>
-                            Tra cứu & Hỏi đáp
-                        </button>
+                <nav className="bg-white border-b border-gray-200/80 shadow-sm flex-shrink-0">
+                    <div className="px-6 flex gap-1">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.key}
+                                onClick={() => this.handleTabChange(tab.key)}
+                                className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all duration-200 rounded-t-xl ${
+                                    activeTab === tab.key
+                                        ? 'text-primary-600 bg-primary-50/80 after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-primary-500 after:rounded-full'
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                }`}
+                                title={'Chuy\u1EC3n tab (Alt+' + tab.shortcut + ')'}
+                            >
+                                <span className="text-lg">{tab.icon}</span>
+                                {tab.label}
+                                <span className="ml-1 text-[10px] text-gray-400 font-mono">Alt+{tab.shortcut}</span>
+                            </button>
+                        ))}
                     </div>
                 </nav>
 
-                {/* Tab Content */}
                 <main className="flex-1 overflow-auto">
                     {activeTab === 'input' && (
                         <TabInput onDocumentProcessed={(doc) => this.handleDocumentProcessed(doc)} />
@@ -229,22 +190,19 @@ class App extends React.Component {
                     )}
                 </main>
 
-                {/* Status Bar */}
-                <footer className="bg-gray-800 text-gray-300 p-2 text-xs border-t">
-                    <div className="container mx-auto flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <span>📄 Tài liệu: {documents.length}</span>
-                            {currentDocument && (
-                                <span className="text-gray-400">|</span>
-                            )}
-                            {currentDocument && (
-                                <span>📌 Hiện tại: {currentDocument.filename}</span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <span>SmartDoc AI v1.0</span>
-                            <span>⌨️ Alt+1/2/3: Tabs</span>
-                        </div>
+                <footer className="bg-white border-t border-gray-200 px-6 py-2 text-[11px] text-gray-400 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">{'\u{1F4C4}'} Tài liệu: <strong className="text-gray-600">{documents.length}</strong></span>
+                        {currentDocument && (
+                            <>
+                                <span className="text-gray-300">|</span>
+                                <span className="flex items-center gap-1">{'\u{1F4CC}'} Hiện tại: <span className="text-gray-600 truncate max-w-[200px]">{currentDocument.filename}</span></span>
+                            </>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span>SmartDoc AI v1.0</span>
+                        <span className="text-gray-300">{'\u2328'} Alt+1/2/3: Chuyển tab</span>
                     </div>
                 </footer>
             </div>
