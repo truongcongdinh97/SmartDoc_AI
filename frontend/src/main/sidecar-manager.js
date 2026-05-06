@@ -172,6 +172,45 @@ class SidecarManager {
             return false;
         }
     }
+
+    async runOnce(name, script, { args = [], cwd } = {}) {
+        const procCwd = cwd || this.getBackendDir();
+        const scriptPath = path.join(this.getBackendDir(), script);
+        const python = this.getPythonPath();
+
+        console.log(`[Sidecar] RunOnce ${name}: ${python} ${script}`);
+
+        return new Promise((resolve, reject) => {
+            const child = spawn(python, [scriptPath, ...args], {
+                cwd: procCwd,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                windowsHide: true,
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            child.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            child.on('error', (err) => {
+                reject(err);
+            });
+
+            child.on('exit', (code) => {
+                if (code === 0) {
+                    resolve(stdout.trim());
+                } else {
+                    reject(new Error(stderr.trim() || `Exit code ${code}`));
+                }
+            });
+        });
+    }
 }
 
 module.exports = SidecarManager;

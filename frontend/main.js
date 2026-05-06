@@ -15,6 +15,8 @@ const SidecarManager = require('./src/main/sidecar-manager');
 let mainWindow = null;
 let sidecar = null;
 
+const FLASK_PORT = 5000;
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1280,
@@ -50,41 +52,12 @@ function setupSidecar() {
     // IPC: Check hardware
     ipcMain.handle('hardware-check', async () => {
         try {
-            await sidecar.start('hardware-check', 'hardware_check.py', {
-                onMessage: (data) => {
-                    try {
-                        const result = JSON.parse(data);
-                        if (mainWindow && result.gpu) {
-                            mainWindow.webContents.send('hardware-check-result', result);
-                        }
-                    } catch {}
-                },
-            });
-
-            const result = await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('timeout')), 10000);
-                const handler = (_event, data) => {
-                    clearTimeout(timeout);
-                    resolve(data);
-                };
-                const entry = sidecar.processes.get('hardware-check');
-                if (entry) {
-                    const origHandler = entry.process.stdout.listeners('data').slice(-1)[0];
-                    // Already handled via onMessage
-                }
-                ipcMain.once('hardware-check-result-internal', handler);
-                setTimeout(() => {
-                    cleanup();
-                    resolve({ status: 'ok', gpu: { gpu_detected: false, recommended_mode: 'hybrid' } });
-                }, 5000);
-
-                function cleanup() {
-                    clearTimeout(timeout);
-                    ipcMain.removeListener('hardware-check-result-internal', handler);
-                }
-            });
-
-            return result;
+            const output = await sidecar.runOnce('hardware-check', 'hardware_check.py');
+            try {
+                return JSON.parse(output);
+            } catch {
+                return { status: 'ok', gpu: { gpu_detected: false, recommended_mode: 'hybrid' } };
+            }
         } catch (error) {
             return { status: 'error', error: error.message, gpu: { gpu_detected: false, recommended_mode: 'hybrid' } };
         }
@@ -99,15 +72,38 @@ function setupSidecar() {
     });
 
     ipcMain.handle('sidecar-stop', async (_event, name) => {
-        if (sidecar) {
-            return sidecar.stop(name);
-        }
+        if (sidecar) return sidecar.stop(name);
         return false;
+    });
+
+    ipcMain.handle('open-file-dialog', async () => {
+        const { dialog } = require('electron');
+        const result = await dialog.showOpenDialog({
+            properties: ['openFile', 'multiSelections'],
+            filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+        });
+        if (!result.canceled && result.filePaths.length > 0) {
+            return result.filePaths;
+        }
+        return [];
     });
 }
 
-app.whenReady().then(() => {
+async function startBackend() {
+    console.log('[Main] Starting Flask backend...');
+    try {
+        await sidecar.start('flask-backend', 'app.py', {
+            port: FLASK_PORT,
+        });
+        console.log('[Main] Flask backend ready on port', FLASK_PORT);
+    } catch (error) {
+        console.error('[Main] Failed to start Flask backend:', error.message);
+    }
+}
+
+app.whenReady().then(async () => {
     setupSidecar();
+    await startBackend();
     createWindow();
 
     app.on('activate', () => {
@@ -127,17 +123,4 @@ app.on('before-quit', () => {
     if (sidecar) {
         sidecar.stopAll();
     }
-});
-
-ipcMain.handle('open-file-dialog', async () => {
-    const { dialog } = require('electron');
-    const result = await dialog.showOpenDialog({
-        properties: ['openFile', 'multiSelections'],
-        filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
-        return result.filePaths;
-    }
-    return [];
 });
