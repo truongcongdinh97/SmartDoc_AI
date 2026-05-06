@@ -11,6 +11,8 @@ class App extends React.Component {
         this.state = {
             showSplash: true,
             hardwareInfo: null,
+            userName: null,
+            userPosition: null,
             activeTab: 'input',
             backendStatus: 'checking',
             ollamaRunning: false,
@@ -29,7 +31,12 @@ class App extends React.Component {
             } catch {}
         }
 
-        this.setState({ showSplash: false, hardwareInfo: hwInfo });
+        this.setState({
+            showSplash: false,
+            hardwareInfo: hwInfo.hardware || hwInfo,
+            userName: hwInfo.userName,
+            userPosition: hwInfo.userPosition,
+        });
     }
 
     checkBackend() {
@@ -86,7 +93,7 @@ class App extends React.Component {
             });
         }
 
-        const { activeTab, backendStatus, ollamaRunning, documents, currentDocument, notification, loading, hardwareInfo } = this.state;
+        const { activeTab, backendStatus, ollamaRunning, documents, currentDocument, notification, loading, hardwareInfo, userName, userPosition } = this.state;
 
         const tabs = [
             { key: 'input', label: 'Tiếp nhận & Quét', icon: '\u{1F4E5}', shortcut: '1' },
@@ -109,6 +116,11 @@ class App extends React.Component {
                                 <h1 className="text-base font-semibold">SmartDoc AI</h1>
                                 <p className="text-[10px] text-slate-400 -mt-0.5">Phần mềm quản lý tài liệu thông minh</p>
                             </div>
+                            {userName && (
+                                <div className="text-[10px] text-slate-400 ml-1">
+                                    {userName}{userPosition ? ' - ' + userPosition : ''}
+                                </div>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             {gpuDetected && (

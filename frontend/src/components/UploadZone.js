@@ -209,7 +209,7 @@ class UploadZone extends React.Component {
                     {!processing && !isDragging && (
                         <div className="space-y-4">
                             <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary-100 to-accent-50 rounded-2xl flex items-center justify-center">
-                                <span className="text-4xl">{processIcon}</span>
+                                <span className="text-4xl">{current.icon}</span>
                             </div>
                             <div>
                                 <p className="text-lg font-semibold text-gray-700">Kéo thả PDF vào đây</p>
