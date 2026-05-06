@@ -11,8 +11,9 @@ Updated: 2026-05-06
 
 import os
 import re
+import math
 import logging
-from typing import Optional
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,61 @@ class LightweightProcessor:
             logger.error(f"[Docling] Failed: {e}")
             return None
 
+    # ─── Chunking ─────────────────────────
+
+    def chunk_text(self, text: str, chunk_size: int = 2000) -> List[str]:
+        """Split text into chunks at paragraph boundaries.
+
+        Args:
+            text: Full markdown text
+            chunk_size: Target chars per chunk (~500 tokens)
+
+        Returns:
+            List of chunk strings
+        """
+        if not text:
+            return []
+
+        paragraphs = text.split('\n\n')
+        chunks = []
+        current = []
+
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+            current_len = sum(len(p) for p in current)
+            if current_len + len(para) > chunk_size and current:
+                chunks.append('\n\n'.join(current))
+                current = [para]
+            else:
+                current.append(para)
+
+        if current:
+            chunks.append('\n\n'.join(current))
+
+        if not chunks:
+            chunks = [text]
+
+        logger.info(f"[Chunk] Split {len(text)} chars into {len(chunks)} chunks")
+        return chunks
+
+    def chunk_data(self, text: str, chunk_size: int = 2000) -> List[dict]:
+        """Generate chunk data with embeddings placeholder.
+
+        Args:
+            text: Full markdown text
+            chunk_size: Target chars per chunk
+
+        Returns:
+            List of chunk dicts with text, length, index
+        """
+        chunks = self.chunk_text(text, chunk_size)
+        return [
+            {'index': i, 'text': c, 'length': len(c)}
+            for i, c in enumerate(chunks)
+        ]
+
     # ─── Main pipeline ─────────────────────
 
     def process(self, file_path: str, mode: str = "auto") -> dict:
@@ -135,6 +191,7 @@ class LightweightProcessor:
             return {
                 "success": True,
                 "markdown": markdown,
+                "chunks": self.chunk_data(markdown),
                 "method": method or "unknown",
                 "chars": len(markdown),
                 "size_bytes": file_size,
