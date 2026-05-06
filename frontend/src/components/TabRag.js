@@ -1,6 +1,5 @@
 const React = require('react');
 const ApiService = require('../services/api').default;
-const WebViewLogin = require('./WebViewLogin').default;
 
 class TabRag extends React.Component {
     constructor(props) {
@@ -110,24 +109,20 @@ class TabRag extends React.Component {
                     }`}>
                         {chatProvider === 'ds2api' ? '\u{1F310} ds2api' : '\u{1F5A8} Ollama'}
                     </span>
-                    {chatProvider === 'ds2api' && (
-                        <WebViewLogin
-                            service="DeepSeek"
-                            loginUrl="https://chat.deepseek.com"
-                            compact
-                            onLogin={() => this.setState({ ds2apiLoggedIn: true })}
-                            onLogout={() => this.setState({ ds2apiLoggedIn: false })}
-                        />
-                    )}
-                    {!ds2apiAvailable && chatProvider === 'ollama' && (
-                        <WebViewLogin
-                            service="DeepSeek"
-                            loginUrl="https://chat.deepseek.com"
-                            compact
-                            onLogin={() => this.setState({ ds2apiLoggedIn: true })}
-                            onLogout={() => this.setState({ ds2apiLoggedIn: false })}
-                        />
-                    )}
+                    {chatProvider === 'ds2api' && React.createElement(window.WebViewLoginComponent, {
+                        service: "DeepSeek",
+                        loginUrl: "https://chat.deepseek.com",
+                        compact: true,
+                        onLogin: () => this.setState({ ds2apiLoggedIn: true }),
+                        onLogout: () => this.setState({ ds2apiLoggedIn: false }),
+                    })}
+                    {!ds2apiAvailable && chatProvider === 'ollama' && React.createElement(window.WebViewLoginComponent, {
+                        service: "DeepSeek",
+                        loginUrl: "https://chat.deepseek.com",
+                        compact: true,
+                        onLogin: () => this.setState({ ds2apiLoggedIn: true }),
+                        onLogout: () => this.setState({ ds2apiLoggedIn: false }),
+                    })}
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider ml-2">{'\u{1F3F7}\uFE0F'} Lọc:</span>
                     <div className="flex flex-wrap gap-1.5">
                         {Array.isArray(wings) && wings.map((wing, idx) => {

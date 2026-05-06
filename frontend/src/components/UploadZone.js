@@ -1,6 +1,5 @@
 const React = require('react');
 const ApiService = require('../services/api').default;
-const WebViewLogin = require('./WebViewLogin').default;
 
 class UploadZone extends React.Component {
     constructor(props) {
@@ -123,14 +122,14 @@ class UploadZone extends React.Component {
                 {/* Google Login for NotebookLM */}
                 {mode === 'hybrid' && (
                     <div className="mb-4">
-                        <WebViewLogin
-                            service="Google"
-                            icon={'\u{1FF7}\uFE0F'}
-                            loginUrl="https://accounts.google.com"
-                            onLogin={(s) => this.handleGoogleLogin(s)}
-                            onLogout={() => this.setState({ googleLoggedIn: false })}
-                            compact
-                        />
+                        {React.createElement(window.WebViewLoginComponent, {
+                            service: "Google",
+                            icon: '\u{1FF7}\uFE0F',
+                            loginUrl: "https://accounts.google.com",
+                            onLogin: (s) => this.handleGoogleLogin(s),
+                            onLogout: () => this.setState({ googleLoggedIn: false }),
+                            compact: true,
+                        })}
                     </div>
                 )}
 
@@ -246,13 +245,13 @@ class UploadZone extends React.Component {
                 {/* Login Status */}
                 {mode === 'hybrid' && !googleLoggedIn && (
                     <div className="mt-4">
-                        <WebViewLogin
-                            service="Google"
-                            icon={'\u{1F310}'}
-                            loginUrl="https://accounts.google.com"
-                            onLogin={(s) => this.handleGoogleLogin(s)}
-                            onLogout={() => this.setState({ googleLoggedIn: false })}
-                        />
+                        {React.createElement(window.WebViewLoginComponent, {
+                            service: "Google",
+                            icon: '\u{1F310}',
+                            loginUrl: "https://accounts.google.com",
+                            onLogin: (s) => this.handleGoogleLogin(s),
+                            onLogout: () => this.setState({ googleLoggedIn: false }),
+                        })}
                     </div>
                 )}
             </div>
