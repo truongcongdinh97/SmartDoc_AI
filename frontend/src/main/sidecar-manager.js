@@ -19,7 +19,7 @@ class SidecarManager {
     }
 
     getBackendDir() {
-        return path.join(__dirname, '..', '..', 'backend');
+        return path.join(__dirname, '..', '..', '..', 'backend');
     }
 
     getPythonPath() {
