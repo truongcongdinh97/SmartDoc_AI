@@ -57,7 +57,7 @@ cancel_requests = {}
 
 # Initialize other services
 metadata_extractor = MetadataExtractor(ollama)
-document_refiner = DocumentRefiner(ollama)
+document_refiner = DocumentRefiner(ollama, ds2api)
 
 # Initialize embedding service with nomic-embed-text (768 dimensions)
 embedding_service = EmbeddingService(model="nomic-embed-text")

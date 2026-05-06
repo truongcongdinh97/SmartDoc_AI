@@ -12,7 +12,7 @@ class UploadZone extends React.Component {
         super(props);
         this.state = {
             isDragging: false,
-            mode: props.operationMode || 'hybrid',
+            mode: 'cloud',
             files: [],
             processing: false,
             cancelled: false,
