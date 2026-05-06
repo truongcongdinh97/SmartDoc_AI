@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Electron frontend
 
-# Initialize components
-processor = DocumentProcessor()  # Docling (full, for enhanced mode)
-light_processor = LightweightProcessor()  # pypdf -> OCR -> Docling (default)
+# Initialize components (lazy: Docling loads models on first use)
+processor = None  # Docling - lazy init in process_file
+light_processor = LightweightProcessor()  # pypdf -> OCR -> Docling
 storage = VectorStorage()
 
 # Initialize AI clients
@@ -87,11 +87,13 @@ def start_ollama():
 @app.route('/api/process', methods=['POST'])
 def process_file():
     """Process uploaded file with Gemma 4 multimodal and RAG embedding."""
+    global processor
+    if processor is None:
+        from processor import DocumentProcessor
+        processor = DocumentProcessor()
     data = request.json
     file_path = data.get('file_path')
-    method = data.get('method', 'local')  # 'cloud' or 'local'
-    generate_embeddings = data.get('embed', True)
-    generate_images = data.get('images', False)
+    method = data.get('method', 'local')
 
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'Invalid file path'}), 400
@@ -134,70 +136,17 @@ def process_file():
         if not result['success']:
             return jsonify({'error': result['metadata'].get('error', 'Processing failed')}), 500
 
-        # Extract metadata (skip if Ollama offline)
-        images = result.get('images', None)
-        metadata = {}
-        wing = 'tai_lieu_khac'
-        try:
-            if ollama.is_running():
-                metadata = metadata_extractor.extract_metadata(result['markdown'], file_path, images=images)
-                wing = metadata_extractor.classify_wing(metadata)
-        except Exception as e:
-            logger.warning(f"Metadata extraction skipped (Ollama may be offline): {e}")
-            metadata = {'title': os.path.basename(file_path), 'method': result.get('metadata', {}).get('method', 'pypdf')}
-
-        # Create base document data
-        import json
-        import time
-        base_doc_id = f"{os.path.basename(file_path)}_{int(time.time())}"
-        doc_data = {
-            'id': base_doc_id,
-            'filename': os.path.basename(file_path),
-            'markdown': result['markdown'],
-            'metadata': json.dumps({**result.get('metadata', {}), **metadata}),
-            'embedding': [0.0] * embedding_service.dimension,
-            'wing': wing,
-            'created_at': str(time.time())
-        }
-
-        # Store base document
-        try:
-            storage.add_document(wing, doc_data)
-        except Exception as e:
-            logger.warning(f"Storage failed (non-fatal): {e}")
-
-        # Generate and store embeddings if requested
-        chunks_stored = 0
-        if generate_embeddings and ollama.is_running():
-            try:
-                chunks = rag_pipeline.embed_document(result['markdown'])
-            except Exception as e:
-                logger.warning(f"Embedding generation skipped: {e}")
-                chunks = []
-            for i, chunk in enumerate(chunks):
-                chunk_doc = {
-                    'id': f"{base_doc_id}_chunk_{i}",
-                    'filename': f"{os.path.basename(file_path)} (đoạn {i})",
-                    'markdown': chunk['text'],
-                    'metadata': json.dumps({
-                        'parent_id': base_doc_id,
-                        'chunk_index': i,
-                        'chunk_length': chunk['length']
-                    }),
-                    'embedding': chunk['embedding'],
-                    'wing': wing,
-                    'created_at': str(time.time())
-                }
-                storage.add_document(wing, chunk_doc)
-                chunks_stored += 1
-
+        # Lightweight mode: return immediately (no storage/AI calls)
         return jsonify({
             'success': True,
             'markdown': result['markdown'],
-            'metadata': {**result['metadata'], **metadata},
-            'wing': wing,
-            'chunks_embedded': chunks_stored,
-            'has_images': result.get('has_images', False)
+            'metadata': {
+                'method': result.get('metadata', {}).get('method', 'pypdf'),
+                'filename': os.path.basename(file_path),
+            },
+            'wing': 'tai_lieu_khac',
+            'chunks_embedded': 0,
+            'has_images': False,
         })
 
     except Exception as e:
