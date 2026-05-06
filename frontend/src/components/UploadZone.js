@@ -48,7 +48,7 @@ class UploadZone extends React.Component {
         if (this.abortController) {
             this.abortController.abort();
         }
-        if (this.state.mode === 'hybrid' && this.state.files.length > 0) {
+            if (this.state.mode === 'cloud' && this.state.files.length > 0) {
             this.state.files.forEach(f => {
                 ApiService.cancelProcess(f.path || f.name);
             });
@@ -78,21 +78,23 @@ class UploadZone extends React.Component {
 
             try {
                 const filePath = file.path || file.name;
-                const useCloud = this.state.mode === 'hybrid';
-                const label = useCloud ? 'Máy lọc Cloud' : 'Local';
-                this.setState({ status: `${i + 1}/${pdfFiles.length}: Đang xử lý ${label}...` });
+                const activeMode = this.state.mode;
+                const apiMethod = modeConfig[activeMode]?.method || 'local';
+                const label = modeConfig[activeMode]?.label || 'Local';
+                this.setState({ status: `${i + 1}/${pdfFiles.length}: ${label}...` });
 
                 const result = await ApiService.processFile(
                     filePath,
-                    { method: useCloud ? 'cloud' : 'local' },
+                    { method: apiMethod },
                     signal
                 );
 
+                const usedMethod = result?.metadata?.method || apiMethod;
                 this.setState(prevState => ({
                     processedFiles: [...prevState.processedFiles, {
                         filename: result.metadata?.filename || file.name,
                         success: true,
-                        method: useCloud ? '\u2601\uFE0F Cloud' : '\u{1F5A8} Local',
+                        method: usedMethod === 'pypdf' ? '\u26A1 Nhanh' : usedMethod === 'ocr' ? '\u{1F4F7} OCR' : usedMethod === 'cloud' ? '\u2601\uFE0F Cloud' : '\u{1F52C} Docling',
                     }]
                 }));
 
@@ -132,10 +134,12 @@ class UploadZone extends React.Component {
     render() {
         const { isDragging, mode, files, processing, progress, status, error, processedFiles, showLogin, googleLoggedIn } = this.state;
 
-        const processIcon = mode === 'hybrid' ? '\u2601\uFE0F' : '\u{1F5A8}\uFE0F';
-        const processLabel = mode === 'hybrid'
-            ? 'Máy lọc Cloud (NotebookLM)'
-            : 'Xử lý Local (Docling)';
+        const modeConfig = {
+            auto: { icon: '\u26A1', label: 'Nhanh (Auto)', method: 'local' },
+            cloud: { icon: '\u2601\uFE0F', label: 'Cloud (NotebookLM)', method: 'cloud' },
+            enhanced: { icon: '\u{1F52C}', label: 'Nâng cao (Docling)', method: 'enhanced' },
+        };
+        const current = modeConfig[mode] || modeConfig.auto;
 
         return (
             <div className="p-8 max-w-3xl mx-auto animate-fade-in">
@@ -143,11 +147,11 @@ class UploadZone extends React.Component {
                     <h2 className="text-2xl font-bold text-gray-800 tracking-tight">
                         {'\u{1F4E5}'} Tải lên Tài liệu
                     </h2>
-                    <p className="text-sm text-gray-500 mt-1">Chế độ: {processLabel}</p>
+                    <p className="text-sm text-gray-500 mt-1">Chế độ: {current.icon} {current.label}</p>
                 </div>
 
                 {/* Google Login for NotebookLM */}
-                {mode === 'hybrid' && (
+                {mode === 'cloud' && (
                     <div className="mb-4">
                         {React.createElement(window.WebViewLoginComponent, {
                             service: "Google",
@@ -162,16 +166,18 @@ class UploadZone extends React.Component {
 
                 {/* Mode Toggle */}
                 {this.props.onModeToggle && (
-                    <div className="mb-4 flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                        <span className="text-sm text-gray-600">{'\u2699\uFE0F'} Phương thức xử lý:</span>
-                        <button onClick={() => this.props.onModeToggle('hybrid')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${mode === 'hybrid' ? 'bg-primary-600 text-white shadow-sm' : 'bg-white text-gray-600 border'}`}>
-                            {'\u2601\uFE0F'} Cloud (NotebookLM)
-                        </button>
-                        <button onClick={() => this.props.onModeToggle('local')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${mode === 'local' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-gray-600 border'}`}>
-                            {'\u{1F5A8}\uFE0F'} Local (Docling)
-                        </button>
+                    <div className="mb-4 flex flex-wrap items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <span className="text-sm text-gray-600">{'\u2699\uFE0F'} Phương thức:</span>
+                        {Object.entries(modeConfig).map(([key, cfg]) => (
+                            <button key={key} onClick={() => this.props.onModeToggle(key)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                    mode === key
+                                        ? 'bg-primary-600 text-white shadow-sm'
+                                        : 'bg-white text-gray-600 border hover:bg-gray-100'
+                                }`}>
+                                {cfg.icon} {cfg.label}
+                            </button>
+                        ))}
                     </div>
                 )}
 
@@ -210,8 +216,8 @@ class UploadZone extends React.Component {
                                 <p className="text-sm text-gray-400 mt-1">hoặc nhấp để chọn file</p>
                             </div>
                             <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                                <span className={`px-2 py-0.5 rounded-full ${mode === 'hybrid' ? 'bg-primary-50 text-primary-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                    {processLabel}
+                                <span className={`px-2 py-0.5 rounded-full text-xs ${mode === 'auto' ? 'bg-amber-50 text-amber-700' : mode === 'cloud' ? 'bg-primary-50 text-primary-600' : 'bg-violet-50 text-violet-600'}`}>
+                                    {current.icon} {current.label}
                                 </span>
                             </div>
                         </div>
@@ -275,8 +281,8 @@ class UploadZone extends React.Component {
                     </div>
                 )}
 
-                {/* Login Status */}
-                {mode === 'hybrid' && !googleLoggedIn && (
+                {/* Login Status (only for cloud mode) */}
+                {mode === 'cloud' && !googleLoggedIn && (
                     <div className="mt-4">
                         {React.createElement(window.WebViewLoginComponent, {
                             service: "Google",

@@ -14,6 +14,7 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from processor import DocumentProcessor
+from lightweight_processor import LightweightProcessor
 from vector_storage import VectorStorage
 from ollama_client import OllamaClient
 from ds2api_client import DS2APIClient
@@ -39,7 +40,8 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for Electron frontend
 
 # Initialize components
-processor = DocumentProcessor()
+processor = DocumentProcessor()  # Docling (full, for enhanced mode)
+light_processor = LightweightProcessor()  # pypdf -> OCR -> Docling (default)
 storage = VectorStorage()
 
 # Initialize AI clients
@@ -95,7 +97,7 @@ def process_file():
         return jsonify({'error': 'Invalid file path'}), 400
 
     try:
-        # Use bridge pipeline for cloud conversion or local processor
+        # Determine processing pipeline
         if method == 'cloud':
             logger.info(f"Processing via Cloud bridge: {file_path}")
             bridge_result = bridge.convert_document(file_path, prefer_cloud=True)
@@ -108,9 +110,26 @@ def process_file():
                 }
             else:
                 logger.warning(f"Cloud bridge failed, falling back to local: {bridge_result.get('error')}")
-                result = processor.process_file(file_path, generate_images=False)
+                lp_result = light_processor.process(file_path, mode='auto')
+                result = lp_result if lp_result['success'] else processor.process_file(file_path, generate_images=False)
+                if result.get('success'):
+                    result['metadata'] = {'method': result.get('method', 'docling')}
+        elif method == 'enhanced':
+            logger.info(f"Processing via Enhanced (Docling): {file_path}")
+            dl_result = processor.process_file(file_path, generate_images=generate_images)
+            result = dl_result if dl_result['success'] else light_processor.process(file_path, mode='auto')
         else:
-            result = processor.process_file(file_path, generate_images=generate_images)
+            logger.info(f"Processing via Lightweight pipeline: {file_path}")
+            lp_result = light_processor.process(file_path, mode='auto')
+            if lp_result['success']:
+                result = {
+                    'success': True,
+                    'markdown': lp_result['markdown'],
+                    'metadata': {'method': lp_result.get('method', 'pypdf')},
+                    'images': None,
+                }
+            else:
+                result = processor.process_file(file_path, generate_images=generate_images)
 
         if not result['success']:
             return jsonify({'error': result['metadata'].get('error', 'Processing failed')}), 500
