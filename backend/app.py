@@ -215,19 +215,40 @@ def bridge_status():
     })
 
 
-@app.route('/api/bridge/install', methods=['POST'])
-def bridge_install():
-    """Install NotebookLM bridge."""
-    data = request.json or {}
-    bridge_type = data.get('type', 'notebooklm')
+@app.route('/api/bridge/install/notebooklm', methods=['POST'])
+def bridge_install_notebooklm():
+    """Install NotebookLM bridge (blocking, waits for completion)."""
     try:
-        if bridge_type == 'notebooklm':
-            success = bridge.install_notebooklm()
-            return jsonify({'success': success, 'type': 'notebooklm'})
-        else:
-            return jsonify({'error': 'Invalid bridge type'}), 400
+        import shutil
+        target_dir = os.path.join(
+            os.environ.get("APPDATA", os.path.expanduser("~")),
+            "SmartDoc_AI", "drivers", "notebooklm-mcp-cli"
+        )
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir)
+
+        logger.info("Cloning NotebookLM Bridge...")
+        subprocess.run(['git', 'clone', 'https://github.com/jacob-bd/notebooklm-mcp-cli.git',
+                       target_dir], capture_output=True, timeout=60)
+
+        logger.info("Installing npm dependencies...")
+        subprocess.run(['npm', 'install'], cwd=target_dir, capture_output=True, timeout=120)
+
+        logger.info("Installing Chromium...")
+        subprocess.run(['npx', 'playwright', 'install', 'chromium'],
+                      cwd=target_dir, capture_output=True, timeout=180)
+
+        logger.info("NotebookLM Bridge installed successfully!")
+        return jsonify({'success': True, 'message': 'NotebookLM Bridge đã được cài đặt thành công!'})
+
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Cài đặt bị timeout. Vui lòng thử lại hoặc cài thủ công.'}), 500
+    except FileNotFoundError as e:
+        if 'git' in str(e):
+            return jsonify({'success': False, 'error': 'Git chưa được cài đặt. Vui lòng cài Git từ https://git-scm.com'}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/chat/provider', methods=['GET', 'POST'])

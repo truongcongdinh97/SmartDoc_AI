@@ -12,6 +12,9 @@
 let API_PORT = 5000;
 
 class ApiService {
+    static get port() { return API_PORT; }
+    static setPort(port) { API_PORT = port; }
+
     get baseUrl() {
         return `http://127.0.0.1:${API_PORT}/api`;
     }

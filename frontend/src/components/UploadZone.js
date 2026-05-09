@@ -144,15 +144,41 @@ class UploadZone extends React.Component {
 
     setMode(mode) {
         if (this.state.processing) return;
-        this.setState({ mode, error: null, processedFiles: [], files: [] });
+        this.setState({ mode, error: null, processedFiles: [], files: [], installing: false });
+    }
+
+    async checkAndInstallBridge() {
+        this.setState({ installing: true, installStatus: 'Đang cài đặt NotebookLM Bridge...' });
+        try {
+            const r = await fetch(`http://127.0.0.1:${ApiService.port || 5000}/api/bridge/install/notebooklm`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await r.json();
+            if (data.success) {
+                this.setState({ installing: false, installStatus: 'Cài đặt thành công! Đang tải lại...' });
+                setTimeout(() => this.setState({ installStatus: null, mode: 'cloud' }), 1500);
+            } else {
+                this.setState({ installing: false, installError: data.error || 'Cài đặt thất bại' });
+            }
+        } catch (err) {
+            this.setState({ installing: false, installError: err.message });
+        }
     }
 
     handleGoogleLogin(session) {
         this.setState({ googleLoggedIn: !!session?.cookies?.length });
     }
 
+    async componentDidMount() {
+        try {
+            const r = await fetch(`http://127.0.0.1:${ApiService.port || 5000}/api/bridge/status`);
+            const data = await r.json();
+            this.setState({ bridgeAvailable: data.notebooklm });
+        } catch {}
+    }
+
     render() {
-        const { isDragging, mode, files, processing, progress, status, error, processedFiles, showLogin, googleLoggedIn } = this.state;
+        const { isDragging, mode, files, processing, progress, status, error, processedFiles, showLogin, googleLoggedIn, installing, installStatus, installError, bridgeAvailable } = this.state;
 
         const current = MODE_CONFIG[mode] || MODE_CONFIG.auto;
 
@@ -197,10 +223,42 @@ class UploadZone extends React.Component {
                     </div>
 
                 {error && (
-                    <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-slide-up">
-                        <span className="text-lg">{'\u26A0\uFE0F'}</span>
-                        <p className="text-sm text-red-600 flex-1">{error}</p>
-                        <button onClick={() => this.setState({ error: null })} className="text-red-400">{'\u2715'}</button>
+                    <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl animate-slide-up">
+                        <div className="flex items-start gap-3">
+                            <span className="text-lg">{'\u26A0\uFE0F'}</span>
+                            <p className="text-sm text-red-600 flex-1">{error.replace('Vào Settings → Install Bridge để cài đặt.', '')}</p>
+                            <button onClick={() => this.setState({ error: null })} className="text-red-400">{'\u2715'}</button>
+                        </div>
+                        {(error.includes('NotebookLM') || error.includes('Bridge')) && (
+                            <div className="flex gap-2 mt-3 ml-8">
+                                <button onClick={() => this.checkAndInstallBridge()}
+                                    disabled={installing}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary-600 text-white hover:bg-primary-700 transition-all active:scale-95">
+                                    {'\u{1F4E5}'} Cài NotebookLM Bridge
+                                </button>
+                                <button onClick={() => this.setMode('auto')}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-all">
+                                    {'\u26A1'} Chuyển sang Nhanh
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {installing && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl animate-slide-up">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl animate-spin">{'\u23F3'}</span>
+                            <div>
+                                <p className="text-sm font-medium text-blue-800">{installStatus || 'Đang cài đặt...'}</p>
+                                <p className="text-xs text-blue-500 mt-0.5">Quá trình này có thể mất 1-2 phút (tải Chromium ~150MB)</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {installError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-sm text-red-600">{installError}</p>
                     </div>
                 )}
 
